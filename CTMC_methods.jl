@@ -47,7 +47,37 @@ function birth_death_reflective(n_states, mu, lambda)
    return Q
 end
 
-function rates_energy_potential(energy_potential)
+function mesh_point(sampling_interval, h, i::Int)
+   return sampling_interval[1] + (i-1) * h
+end
+
+function mesh_index(sampling_interval, h, x::Float64)::Int
+   return (x - sampling_interval[1]) / h + 1
+end
+
+function rates_energy_potential(sampling_interval, h, J::Function)::Matrix{Float64}
+   dim = Int(((sampling_interval[2] - sampling_interval[1]) / h) + 1)
+   Q = zeros(dim, dim)
+   for i = 1:dim
+      x = mesh_point(sampling_interval, h, i)
+      I = J(x) > 0
+      if i == 1
+         Q[i, i + 1] = (-J(x) * h * (1-I) + 1 / 2) / h^2
+         Q[i, i] = -(-J(x) * h * (1-I) + 1 / 2) / h^2
+      elseif i == dim
+         Q[i, i - 1] = (J(x) * h * I + 1 / 2) / h^2
+         Q[i, i] = -(J(x) * h * I + 1 / 2) / h^2
+      else
+         Q[i, i - 1] = (J(x) * h * I + 1 / 2) / h^2
+         Q[i, i] = -(J(x) * h * I + 1 / 2) / h^2 - (-J(x) * h * (1-I) + 1 / 2) / h^2
+         Q[i, i + 1] = (-J(x) * h * (1-I) + 1 / 2) / h^2
+      end
+   end
+   return Q
+end
+
+
+function rates_hills(energy_potential)
    Q = zeros(length(energy_potential), length(energy_potential))
    for i = 1:length(energy_potential)
       if i == 1
